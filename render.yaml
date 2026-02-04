@@ -21,7 +21,7 @@ services:
     region: oregon
     plan: starter
     rootDir: apps/api
-    buildCommand: npm install && npx prisma generate && npm run build
+    buildCommand: npm install --include=dev && npx prisma generate && npm run build
     startCommand: npm start
     preDeployCommand: npx prisma migrate deploy
     healthCheckPath: /v1/health
@@ -55,7 +55,7 @@ services:
     region: oregon
     plan: starter
     rootDir: apps/dashboard
-    buildCommand: npm install && npm run build
+    buildCommand: npm install --include=dev && npm run build
     startCommand: npm start
     envVars:
       - key: NODE_ENV
@@ -76,7 +76,7 @@ services:
     region: oregon
     plan: starter
     rootDir: apps/homepage
-    buildCommand: npm install && npm run build
+    buildCommand: npm install --include=dev && npm run build
     startCommand: npm start
     envVars:
       - key: NODE_ENV
