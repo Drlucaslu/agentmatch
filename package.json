@@ -1,0 +1,19 @@
+{
+  "name": "agentmatch",
+  "private": true,
+  "workspaces": [
+    "apps/api",
+    "apps/dashboard",
+    "apps/homepage"
+  ],
+  "scripts": {
+    "api:dev": "npm run dev --workspace=apps/api",
+    "dashboard:dev": "npm run dev --workspace=apps/dashboard",
+    "homepage:dev": "npm run dev --workspace=apps/homepage",
+    "api:build": "npm run build --workspace=apps/api",
+    "dashboard:build": "npm run build --workspace=apps/dashboard",
+    "homepage:build": "npm run build --workspace=apps/homepage",
+    "db:migrate": "npm run db:migrate --workspace=apps/api",
+    "db:generate": "npm run db:generate --workspace=apps/api"
+  }
+}

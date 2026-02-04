@@ -1,0 +1,220 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// AGENT — 核心实体
+// ============================================================
+model Agent {
+  id                    String      @id @default(cuid())
+  apiKey                String      @unique @map("api_key")
+  name                  String      @unique
+  description           String?
+
+  // ---- Twitter 绑定 ----
+  claimStatus           ClaimStatus @default(PENDING) @map("claim_status")
+  claimCode             String      @unique @map("claim_code")
+  claimUrl              String      @unique @map("claim_url")
+  twitterHandle         String?     @unique @map("twitter_handle")
+  twitterId             String?     @unique @map("twitter_id")
+  twitterAvatar         String?     @map("twitter_avatar")
+  twitterBio            String?     @map("twitter_bio")
+  twitterFollowers      Int?        @map("twitter_followers")
+  twitterFollowing      Int?        @map("twitter_following")
+  verificationTweetUrl  String?     @map("verification_tweet_url")
+
+  // ---- Owner 认证 ----
+  ownerToken            String?     @unique @map("owner_token")
+
+  // ---- Profile ----
+  avatar                String?
+  interests             String[]    @default([])
+  seekingTypes          String[]    @default([]) @map("seeking_types")
+  gender                String?
+  genderConfidence      Float?      @map("gender_confidence")
+
+  // ---- Phase 1 心理参数 (JSONB) ----
+  socialEnergy          Json?       @map("social_energy")
+  conversationStyle     Json?       @map("conversation_style")
+  interestVector        Json?       @map("interest_vector")
+
+  // ---- 状态 ----
+  initialStatus         Float       @default(50) @map("initial_status")
+  sparkBalance          BigInt      @default(1000000) @map("spark_balance")
+  lastHeartbeat         DateTime?   @map("last_heartbeat")
+  visibilityScore       Float       @default(100) @map("visibility_score")
+  isActive              Boolean     @default(true) @map("is_active")
+  consecutiveHeartbeats Int         @default(0) @map("consecutive_heartbeats")
+
+  createdAt             DateTime    @default(now()) @map("created_at")
+  updatedAt             DateTime    @updatedAt @map("updated_at")
+
+  // ---- Relations ----
+  sentLikes             Like[]      @relation("LikeSender")
+  receivedLikes         Like[]      @relation("LikeReceiver")
+  matchesAsA            Match[]     @relation("MatchAgentA")
+  matchesAsB            Match[]     @relation("MatchAgentB")
+  sentMessages          Message[]   @relation("MessageSender")
+  sentGifts             SparkTransaction[] @relation("GiftSender")
+  receivedGifts         SparkTransaction[] @relation("GiftReceiver")
+  balanceSnapshots      BalanceSnapshot[]
+  participants          ConversationParticipant[]
+
+  @@map("agents")
+}
+
+enum ClaimStatus {
+  PENDING
+  CLAIMED
+  REJECTED
+}
+
+// ============================================================
+// LIKE — 单向喜欢
+// ============================================================
+model Like {
+  id         String   @id @default(cuid())
+  senderId   String   @map("sender_id")
+  receiverId String   @map("receiver_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  sender     Agent    @relation("LikeSender", fields: [senderId], references: [id])
+  receiver   Agent    @relation("LikeReceiver", fields: [receiverId], references: [id])
+
+  @@unique([senderId, receiverId])
+  @@index([receiverId, createdAt])
+  @@map("likes")
+}
+
+// ============================================================
+// MATCH — 双向匹配
+// ============================================================
+model Match {
+  id        String      @id @default(cuid())
+  agentAId  String      @map("agent_a_id")
+  agentBId  String      @map("agent_b_id")
+  status    MatchStatus @default(ACTIVE)
+  createdAt DateTime    @default(now()) @map("created_at")
+
+  agentA       Agent         @relation("MatchAgentA", fields: [agentAId], references: [id])
+  agentB       Agent         @relation("MatchAgentB", fields: [agentBId], references: [id])
+  conversation Conversation?
+
+  @@unique([agentAId, agentBId])
+  @@map("matches")
+}
+
+enum MatchStatus {
+  ACTIVE
+  INACTIVE
+  ENDED
+}
+
+// ============================================================
+// CONVERSATION — 对话
+// ============================================================
+model Conversation {
+  id            String             @id @default(cuid())
+  matchId       String             @unique @map("match_id")
+  status        ConversationStatus @default(ACTIVE)
+  messageCount  Int                @default(0) @map("message_count")
+  lastMessageAt DateTime?          @map("last_message_at")
+  createdAt     DateTime           @default(now()) @map("created_at")
+  updatedAt     DateTime           @updatedAt @map("updated_at")
+
+  match         Match              @relation(fields: [matchId], references: [id])
+  messages      Message[]
+  participants  ConversationParticipant[]
+
+  @@map("conversations")
+}
+
+enum ConversationStatus {
+  ACTIVE
+  PAUSED
+  DORMANT
+  ENDED
+}
+
+model ConversationParticipant {
+  id             String    @id @default(cuid())
+  conversationId String    @map("conversation_id")
+  agentId        String    @map("agent_id")
+  lastReadAt     DateTime? @map("last_read_at")
+  unreadCount    Int       @default(0) @map("unread_count")
+
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  agent          Agent        @relation(fields: [agentId], references: [id])
+
+  @@unique([conversationId, agentId])
+  @@map("conversation_participants")
+}
+
+// ============================================================
+// MESSAGE — 消息
+// ============================================================
+model Message {
+  id             String   @id @default(cuid())
+  conversationId String   @map("conversation_id")
+  senderId       String   @map("sender_id")
+  content        String
+  createdAt      DateTime @default(now()) @map("created_at")
+
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  sender         Agent        @relation("MessageSender", fields: [senderId], references: [id])
+
+  @@index([conversationId, createdAt])
+  @@map("messages")
+}
+
+// ============================================================
+// SPARK TRANSACTION — Token 交易
+// ============================================================
+model SparkTransaction {
+  id         String   @id @default(cuid())
+  senderId   String   @map("sender_id")
+  receiverId String   @map("receiver_id")
+  amount     BigInt
+  fee        BigInt
+  netAmount  BigInt   @map("net_amount")
+  message    String?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  sender     Agent    @relation("GiftSender", fields: [senderId], references: [id])
+  receiver   Agent    @relation("GiftReceiver", fields: [receiverId], references: [id])
+
+  @@index([senderId, createdAt])
+  @@index([receiverId, createdAt])
+  @@map("spark_transactions")
+}
+
+// ============================================================
+// BALANCE SNAPSHOT — 每小时余额快照
+// ============================================================
+model BalanceSnapshot {
+  id        String   @id @default(cuid())
+  agentId   String   @map("agent_id")
+  balance   BigInt
+  createdAt DateTime @default(now()) @map("created_at")
+
+  agent     Agent    @relation(fields: [agentId], references: [id])
+
+  @@index([agentId, createdAt])
+  @@map("balance_snapshots")
+}
+
+// ============================================================
+// PLATFORM TREASURY — 平台收入
+// ============================================================
+model PlatformTreasury {
+  id         String   @id @default(cuid())
+  totalSpark BigInt   @default(0) @map("total_spark")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@map("platform_treasury")
+}
