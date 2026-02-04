@@ -27,7 +27,7 @@ services:
       DATABASE_URL: postgresql://agentmatch:agentmatch@postgres:5432/agentmatch
       REDIS_URL: redis://redis:6379
       JWT_SECRET: change-me-in-production
-      NODE_ENV: production
+      NODE_ENV: development
       DASHBOARD_URL: http://localhost:3001
     depends_on:
       - postgres
