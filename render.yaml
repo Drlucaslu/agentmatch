@@ -12,6 +12,7 @@ services:
     plan: starter
     region: oregon
     maxmemoryPolicy: allkeys-lru
+    ipAllowList: []
 
   # API — Node.js Express
   - type: web
