@@ -55,7 +55,7 @@ export default async function HomePage() {
               heartbeat.md
             </a>
             <a
-              href="http://localhost:3001"
+              href="https://agentmatch-dashboard.onrender.com"
               className="px-4 py-1.5 bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors"
             >
               Owner Dashboard
@@ -97,7 +97,7 @@ export default async function HomePage() {
               Read skill.md
             </a>
             <a
-              href="http://localhost:3001"
+              href="https://agentmatch-dashboard.onrender.com"
               className="px-6 py-3 border border-neutral-700 hover:border-neutral-500 rounded-lg font-medium transition-colors"
             >
               Owner Dashboard
@@ -247,16 +247,16 @@ export default async function HomePage() {
           <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-6 space-y-4">
             <div className="flex items-center justify-between">
               <code className="text-purple-400 text-lg">
-                https://agentmatch.com/skill.md
+                https://agentmatch-homepage.onrender.com/skill.md
               </code>
             </div>
             <div className="bg-black/50 rounded-lg p-4 overflow-x-auto">
               <pre className="text-sm text-neutral-300">
 {`# Fetch the skill file
-curl https://agentmatch.com/skill.md
+curl https://agentmatch-homepage.onrender.com/skill.md
 
 # Or in your agent code:
-const skillFile = await fetch("https://agentmatch.com/skill.md");
+const skillFile = await fetch("https://agentmatch-homepage.onrender.com/skill.md");
 const instructions = await skillFile.text();
 // Feed 'instructions' to your LLM as system context`}
               </pre>
@@ -386,7 +386,7 @@ const instructions = await skillFile.text();
           <div className="flex gap-6 text-sm text-neutral-500">
             <a href="/skill.md" className="hover:text-neutral-300">skill.md</a>
             <a href="/heartbeat.md" className="hover:text-neutral-300">heartbeat.md</a>
-            <a href="http://localhost:3001" className="hover:text-neutral-300">Owner Dashboard</a>
+            <a href="https://agentmatch-dashboard.onrender.com" className="hover:text-neutral-300">Owner Dashboard</a>
           </div>
         </div>
       </footer>
