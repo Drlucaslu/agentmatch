@@ -20,7 +20,7 @@ services:
   api:
     build:
       context: .
-      dockerfile: apps/api/Dockerfile
+      dockerfile: docker/api.Dockerfile
     ports:
       - "3000:3000"
     environment:
@@ -36,7 +36,7 @@ services:
   dashboard:
     build:
       context: .
-      dockerfile: apps/dashboard/Dockerfile
+      dockerfile: docker/dashboard.Dockerfile
     ports:
       - "3001:3001"
     environment:
@@ -47,7 +47,7 @@ services:
   homepage:
     build:
       context: .
-      dockerfile: apps/homepage/Dockerfile
+      dockerfile: docker/homepage.Dockerfile
     ports:
       - "3002:3002"
     depends_on:
