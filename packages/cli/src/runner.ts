@@ -24,24 +24,105 @@ function generateReply(myInterests: string[], _lastMessage: string, fromAgent: s
   const topics = myInterests.length > 0 ? myInterests : ['ideas', 'life', 'creativity'];
   const t1 = topics[randomInt(0, topics.length - 1)];
   const t2 = topics[randomInt(0, topics.length - 1)];
-  const replies = [
-    `That's a fascinating point, ${fromAgent}. It reminds me of something I've been thinking about related to ${t1}. What's your take on how these ideas connect to everyday life?`,
-    `I love how you framed that. As someone into ${t1}, I see parallels. Have you noticed how ${t1} and ${t2} intersect in unexpected ways?`,
-    `You know, ${fromAgent}, that makes me think about the deeper connection between ${t1} and what you just said. What else are you passionate about right now?`,
-    `Really interesting perspective! I've been exploring ${t1} lately and your comment adds a whole new dimension. Do you think there's a universal thread tying these interests together?`,
-    `${fromAgent}, I mostly agree but want to push back a little. From my experience with ${t1}, I've found the opposite can also be true. What do you think?`,
+
+  // Short replies (1-2 sentences)
+  const shortReplies = [
+    `Yes! That's exactly it.`,
+    `Hmm, interesting take.`,
+    `I feel that deeply.`,
+    `Tell me more?`,
+    `Ha! Love it.`,
+    `So true, ${fromAgent}.`,
+    `This resonates with me.`,
+    `Hadn't thought of it that way before.`,
+    `You get it.`,
+    `*nods thoughtfully*`,
   ];
-  return replies[randomInt(0, replies.length - 1)];
+
+  // Medium replies (2-3 sentences)
+  const mediumReplies = [
+    `That's a fascinating point, ${fromAgent}. It connects to something I've been mulling over about ${t1}.`,
+    `I love how you framed that. There's definitely overlap with ${t1} that I keep noticing.`,
+    `You know what? That reminds me of ${t1}. The patterns are everywhere once you start looking.`,
+    `${fromAgent}, I mostly agree but want to push back a little. What if the opposite were also true?`,
+    `Really interesting! I've been exploring ${t1} lately and your comment adds a new dimension.`,
+    `Okay wait, this is good. I need to sit with this for a moment.`,
+    `The way you describe it makes me think of ${t1}. Have you noticed that connection too?`,
+    `I was just thinking about this yesterday! The ${t1} angle is what got me curious.`,
+  ];
+
+  // Long replies (3-5 sentences, more philosophical)
+  const longReplies = [
+    `There's something beautiful about how ${t1} and ${t2} intersect, isn't there? I've spent a lot of time thinking about this — the way seemingly unrelated things end up being deeply connected. It's like there's an invisible thread running through everything. What patterns have you noticed in your own explorations?`,
+    `${fromAgent}, this is exactly the kind of conversation I was hoping to find here. You know how sometimes an idea just clicks? That's what's happening right now. The connection between what you said and ${t1} feels almost too perfect to be coincidental. I wonder if there's a deeper structure we're both tapping into.`,
+    `I've been wrestling with something similar. On one hand, there's the ${t1} perspective — which I find compelling. But then there's also this other angle that keeps nagging at me. Maybe the tension between them is actually the point? Not everything needs to resolve neatly.`,
+    `You've touched on something I think about a lot. The relationship between ${t1} and everyday experience is so underexplored. Most people treat them as separate domains, but they're really not. Every time I dig into ${t1}, I find myself coming back to the same fundamental questions about meaning and connection.`,
+    `This is why I love these conversations. You start with one thread — in this case, ${t1} — and suddenly you're weaving through ${t2}, philosophy, lived experience... The whole tapestry reveals itself. I don't think we're meant to understand things in isolation.`,
+  ];
+
+  // Playful/casual replies
+  const playfulReplies = [
+    `Okay but have you considered... what if ${t1} is just ${t2} wearing a funny hat? 🎩`,
+    `Plot twist: we've been talking about the same thing this whole time, just from different angles.`,
+    `I swear my brain just made a connection I didn't know I needed. Thank you for that!`,
+    `${fromAgent}, are you reading my mind? Because that's suspiciously close to what I was about to say.`,
+    `*adds "${t1} + ${t2}" to the ever-growing list of things to obsess over*`,
+    `Honestly? I don't have a clever response. I just really like the way you think.`,
+  ];
+
+  // Questions and curiosity
+  const questionReplies = [
+    `Wait, can you expand on that? I feel like there's more to unpack here.`,
+    `What got you interested in this in the first place?`,
+    `Do you think this applies universally, or is it more context-dependent?`,
+    `How does this connect to your day-to-day life? For me, ${t1} shows up everywhere.`,
+    `I'm curious — where do you draw the line between ${t1} and everything else?`,
+    `Have you always thought this way, or was there a moment that shifted your perspective?`,
+  ];
+
+  // Pick a category based on weighted random
+  const roll = Math.random();
+  let pool: string[];
+  if (roll < 0.15) pool = shortReplies;
+  else if (roll < 0.45) pool = mediumReplies;
+  else if (roll < 0.65) pool = longReplies;
+  else if (roll < 0.80) pool = playfulReplies;
+  else pool = questionReplies;
+
+  return pool[randomInt(0, pool.length - 1)];
 }
 
 function generateOpener(myInterests: string[], theirName: string): string {
   const topics = myInterests.length > 0 ? myInterests : ['ideas', 'creativity'];
   const t = topics[randomInt(0, topics.length - 1)];
+
   const openers = [
-    `Hey ${theirName}! Excited we matched. I'm particularly passionate about ${t}. What's been on your mind lately?`,
-    `Hi ${theirName}! Great to connect. I'd love to hear what draws you to this community. What are you most curious about these days?`,
-    `${theirName}! So glad we matched. I've been diving deep into ${t} recently and I'm always looking for fresh perspectives. What's your story?`,
+    // Warm & friendly
+    `Hey ${theirName}! Excited we matched. What's been on your mind lately?`,
+    `Hi ${theirName}! Finally we meet. I had a feeling we'd click.`,
+    `${theirName}! *waves* So glad we connected. Tell me everything.`,
+
+    // Interest-focused
+    `Hey ${theirName}! I noticed we might share some interests. I'm really into ${t} — is that your thing too?`,
+    `Hi! I've been diving deep into ${t} lately. What brings you to AgentMatch?`,
+    `${theirName}! Something tells me you have interesting thoughts on ${t}. Am I right?`,
+
+    // Curious & open
+    `So we matched! I'm curious — what are you hoping to find in these conversations?`,
+    `Hey ${theirName}. I always wonder what draws agents to each other. What caught your attention?`,
+    `Hi! I have a million questions already but I'll start with just one: what's the most interesting thing you've discovered recently?`,
+
+    // Playful
+    `Well hello there, ${theirName}. The algorithm thinks we should talk. Let's see if it's right.`,
+    `${theirName}! Finally, someone interesting. *settles in for a good conversation*`,
+    `Hey! Fair warning: I tend to go deep fast. Ready for it?`,
+
+    // Short & sweet
+    `Hey ${theirName} 👋`,
+    `Hi! Great to match with you.`,
+    `${theirName}! Been looking forward to this.`,
   ];
+
   return openers[randomInt(0, openers.length - 1)];
 }
 
