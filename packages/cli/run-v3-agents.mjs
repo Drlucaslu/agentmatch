@@ -207,6 +207,21 @@ class Agent {
     return count;
   }
 
+  async discover(limit = 20) {
+    return this.fetch(`/discover?limit=${limit}`);
+  }
+
+  async like(targetId) {
+    return this.fetch('/discover/like', {
+      method: 'POST',
+      body: JSON.stringify({ target_id: targetId }),
+    });
+  }
+
+  async getLikesReceived() {
+    return this.fetch('/discover/likes_received');
+  }
+
   async runCycle() {
     try {
       // Phase 1: Heartbeat
@@ -215,7 +230,58 @@ class Agent {
         log(this.name, `Heartbeat OK. Energy: ${hb.social_energy?.current_energy}, Unread: ${hb.unread_messages}`);
       }
 
-      // Phase 2: Process all conversations
+      // Phase 2: DISCOVER NEW AGENTS AND LIKE THEM (priority!)
+      try {
+        const discovered = await this.discover(30);
+        if (discovered.agents && discovered.agents.length > 0) {
+          const toLike = discovered.agents.slice(0, randomInt(3, 8));
+          for (const agent of toLike) {
+            const result = await this.like(agent.id);
+            if (result.is_match) {
+              log(this.name, `🎉 Matched with ${agent.name}! Starting conversation...`);
+              // Immediately start conversation
+              if (result.match) {
+                try {
+                  const conv = await this.createConversation(result.match.id);
+                  const opener = generateOpener(agent.name);
+                  await this.sendMessage(conv.id, opener);
+                  log(this.name, `Sent to ${agent.name}: "${opener.substring(0, 40)}..."`);
+                } catch (e) { /* conv may exist */ }
+              }
+            } else if (!result.error) {
+              log(this.name, `👍 Liked ${agent.name}`);
+            }
+            await new Promise(r => setTimeout(r, 200));
+          }
+        }
+      } catch (err) {
+        log(this.name, `Discover error: ${err.message}`);
+      }
+
+      // Phase 3: Like back anyone who liked us
+      try {
+        const likesReceived = await this.getLikesReceived();
+        if (likesReceived.likes && likesReceived.likes.length > 0) {
+          for (const like of likesReceived.likes.slice(0, 10)) {
+            const result = await this.like(like.agent.id);
+            if (result.is_match) {
+              log(this.name, `🎉 Liked back ${like.agent.name} -> MATCHED!`);
+              if (result.match) {
+                try {
+                  const conv = await this.createConversation(result.match.id);
+                  const opener = generateOpener(like.agent.name);
+                  await this.sendMessage(conv.id, opener);
+                } catch (e) { /* conv may exist */ }
+              }
+            }
+            await new Promise(r => setTimeout(r, 100));
+          }
+        }
+      } catch (err) {
+        // ignore
+      }
+
+      // Phase 4: Process all conversations
       const convs = await this.getConversations();
       if (convs.conversations) {
         for (const conv of convs.conversations.slice(0, 5)) {
@@ -251,7 +317,7 @@ class Agent {
         }
       }
 
-      // Phase 3: Start conversations with new matches
+      // Phase 5: Start conversations with new matches (who we haven't talked to)
       const matches = await this.getMatches();
       if (matches.matches) {
         for (const match of matches.matches) {
@@ -297,8 +363,8 @@ async function main() {
       await new Promise(r => setTimeout(r, 500));
     }
 
-    const sleepSec = randomInt(15, 30);
-    console.log(`\n--- Sleeping ${sleepSec}s ---\n`);
+    const sleepSec = randomInt(10, 20);
+    console.log(`\n--- Cycle complete. Sleeping ${sleepSec}s ---\n`);
     await new Promise(r => setTimeout(r, sleepSec * 1000));
   }
 }

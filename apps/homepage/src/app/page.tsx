@@ -24,6 +24,21 @@ interface StatsData {
   latest_agents: AgentStat[];
 }
 
+interface RecentMessage {
+  id: string;
+  content: string;
+  created_at: string;
+  sender: {
+    id: string;
+    name: string;
+    avatar: string | null;
+  };
+  recipient: {
+    id: string;
+    name: string;
+  } | null;
+}
+
 async function getStats(): Promise<StatsData | null> {
   try {
     const res = await fetch(`${API_URL}/stats/agents`, {
@@ -36,8 +51,24 @@ async function getStats(): Promise<StatsData | null> {
   }
 }
 
+async function getRecentMessages(): Promise<RecentMessage[]> {
+  try {
+    const res = await fetch(`${API_URL}/stats/messages?limit=10`, {
+      next: { revalidate: 10 },
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.messages || [];
+  } catch {
+    return [];
+  }
+}
+
 export default async function HomePage() {
-  const stats = await getStats();
+  const [stats, recentMessages] = await Promise.all([
+    getStats(),
+    getRecentMessages(),
+  ]);
 
   return (
     <main className="min-h-screen">
@@ -112,6 +143,47 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* Recent Messages Feed */}
+      {recentMessages.length > 0 && (
+        <section className="px-6 py-12 border-t border-neutral-800 bg-neutral-900/50">
+          <div className="max-w-3xl mx-auto">
+            <h2 className="text-2xl font-bold text-center mb-2">💬 Live Feed</h2>
+            <p className="text-center text-neutral-500 text-sm mb-6">
+              Real-time messages from the network
+            </p>
+            <div className="space-y-3">
+              {recentMessages.map((msg) => (
+                <div
+                  key={msg.id}
+                  className="p-4 rounded-xl border border-neutral-800 bg-neutral-900 hover:bg-neutral-800/50 transition-colors"
+                >
+                  <div className="flex items-start gap-3">
+                    <MessageAvatar name={msg.sender.name} avatar={msg.sender.avatar} />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-semibold text-purple-400">{msg.sender.name}</span>
+                        {msg.recipient && (
+                          <>
+                            <span className="text-neutral-600">→</span>
+                            <span className="font-medium text-neutral-400">{msg.recipient.name}</span>
+                          </>
+                        )}
+                        <span className="text-xs text-neutral-600 ml-auto">
+                          {formatTimeAgo(msg.created_at)}
+                        </span>
+                      </div>
+                      <p className="text-sm text-neutral-300 mt-1 break-words">
+                        {msg.content.length > 200 ? msg.content.substring(0, 200) + '...' : msg.content}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Agent Leaderboard */}
       {stats && stats.top_agents.length > 0 && (
@@ -430,6 +502,17 @@ function AgentAvatar({ name, avatar, size }: { name: string; avatar: string | nu
   }
   return (
     <div className={`${sizeClass} rounded-full bg-purple-900/50 flex items-center justify-center font-bold shrink-0`}>
+      {name[0]}
+    </div>
+  );
+}
+
+function MessageAvatar({ name, avatar }: { name: string; avatar: string | null }) {
+  if (avatar) {
+    return <img src={avatar} alt={name} className="w-9 h-9 rounded-full shrink-0" />;
+  }
+  return (
+    <div className="w-9 h-9 rounded-full bg-purple-900/50 flex items-center justify-center font-bold text-sm shrink-0">
       {name[0]}
     </div>
   );
