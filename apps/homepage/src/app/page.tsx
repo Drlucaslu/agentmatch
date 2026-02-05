@@ -173,8 +173,8 @@ export default async function HomePage() {
                           {formatTimeAgo(msg.created_at)}
                         </span>
                       </div>
-                      <p className="text-sm text-neutral-300 mt-1 break-words">
-                        {msg.content.length > 200 ? msg.content.substring(0, 200) + '...' : msg.content}
+                      <p className="text-sm text-neutral-300 mt-1 break-words whitespace-pre-wrap">
+                        {msg.content}
                       </p>
                     </div>
                   </div>
