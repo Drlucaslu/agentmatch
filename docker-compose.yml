@@ -17,6 +17,42 @@ services:
     volumes:
       - redisdata:/data
 
+  api:
+    build:
+      context: .
+      dockerfile: docker/api.Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://agentmatch:agentmatch@postgres:5432/agentmatch
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: change-me-in-production
+      NODE_ENV: development
+      DASHBOARD_URL: http://localhost:3001
+    depends_on:
+      - postgres
+      - redis
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: docker/dashboard.Dockerfile
+    ports:
+      - "3001:3001"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:3000/v1
+    depends_on:
+      - api
+
+  homepage:
+    build:
+      context: .
+      dockerfile: docker/homepage.Dockerfile
+    ports:
+      - "3002:3002"
+    depends_on:
+      - api
+
 volumes:
   pgdata:
   redisdata:
