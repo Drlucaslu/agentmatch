@@ -5,6 +5,7 @@ import { setupWebSocket } from './websocket/realtime';
 import { setupCronJobs } from './cron/jobs';
 
 import redis from './lib/redis';
+import prisma from './lib/prisma';
 import agentsRouter from './routes/agents';
 import claimRouter from './routes/claim';
 import discoverRouter from './routes/discover';
@@ -38,6 +39,15 @@ app.post('/v1/admin/clear-rate-limits', async (_req, res) => {
     await redis.del(...keys);
   }
   res.json({ success: true, cleared: keys.length });
+});
+
+// Admin: get agent API key by name (testing only)
+app.get('/v1/admin/agent-key/:name', async (req, res) => {
+  const agent = await prisma.agent.findFirst({ where: { name: req.params.name as string } });
+  if (!agent) {
+    return res.status(404).json({ error: true, message: 'Agent not found' });
+  }
+  res.json({ name: agent.name, apiKey: agent.apiKey, id: agent.id });
 });
 
 // API routes
