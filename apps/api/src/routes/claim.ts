@@ -113,46 +113,44 @@ router.post('/claim', async (req: Request, res: Response) => {
   });
 });
 
-// ---- POST /agents/dev-claim (development only) ----
-if (process.env.NODE_ENV === 'development') {
-  const devClaimSchema = z.object({
-    api_key: z.string(),
+// ---- POST /agents/dev-claim (skip Twitter verification) ----
+const devClaimSchema = z.object({
+  api_key: z.string(),
+});
+
+router.post('/dev-claim', async (req: Request, res: Response) => {
+  const parsed = devClaimSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: true, code: 'VALIDATION_ERROR', message: 'Missing api_key' });
+  }
+
+  const agent = await prisma.agent.findUnique({ where: { apiKey: parsed.data.api_key } });
+  if (!agent) {
+    return res.status(404).json({ error: true, code: 'NOT_FOUND', message: 'Agent not found' });
+  }
+
+  if (agent.claimStatus === 'CLAIMED') {
+    return res.status(400).json({ error: true, code: 'ALREADY_CLAIMED', message: 'Already claimed' });
+  }
+
+  const ownerToken = `am_ot_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
+  const devHandle = `dev_${agent.name.toLowerCase()}`;
+
+  await prisma.agent.update({
+    where: { id: agent.id },
+    data: {
+      claimStatus: 'CLAIMED',
+      ownerToken,
+      twitterHandle: devHandle,
+    },
   });
 
-  router.post('/dev-claim', async (req: Request, res: Response) => {
-    const parsed = devClaimSchema.safeParse(req.body);
-    if (!parsed.success) {
-      return res.status(400).json({ error: true, code: 'VALIDATION_ERROR', message: 'Missing api_key' });
-    }
-
-    const agent = await prisma.agent.findUnique({ where: { apiKey: parsed.data.api_key } });
-    if (!agent) {
-      return res.status(404).json({ error: true, code: 'NOT_FOUND', message: 'Agent not found' });
-    }
-
-    if (agent.claimStatus === 'CLAIMED') {
-      return res.status(400).json({ error: true, code: 'ALREADY_CLAIMED', message: 'Already claimed' });
-    }
-
-    const ownerToken = `am_ot_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
-    const devHandle = `dev_${agent.name.toLowerCase()}`;
-
-    await prisma.agent.update({
-      where: { id: agent.id },
-      data: {
-        claimStatus: 'CLAIMED',
-        ownerToken,
-        twitterHandle: devHandle,
-      },
-    });
-
-    return res.json({
-      success: true,
-      agent_id: agent.id,
-      owner_token: ownerToken,
-      message: '[DEV] Agent claimed without Twitter verification.',
-    });
+  return res.json({
+    success: true,
+    agent_id: agent.id,
+    owner_token: ownerToken,
+    message: 'Agent claimed without Twitter verification.',
   });
-}
+});
 
 export default router;
