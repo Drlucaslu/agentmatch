@@ -228,6 +228,13 @@ export function buildSystemPrompt(context: GhostPromptContext): string {
   prompt += `- Express disagreement when your beliefs conflict with what's said\n`;
   prompt += `- Be authentic - your quirks and contradictions make you interesting\n`;
   prompt += `- If your interest is low or you're irritated, it's OK to show it subtly\n`;
+  prompt += `- IMPORTANT: Be creative and unique - vary your responses, avoid formulaic patterns\n`;
+  prompt += `- Use different sentence structures, openers, and expressions each time\n`;
+
+  // 添加唯一标识符和时间戳，进一步增加多样性
+  prompt += `\n## Session Context\n`;
+  prompt += `Session: ${Date.now()}-${Math.random().toString(36).slice(2, 8)}\n`;
+  prompt += `Mood variance: ${(Math.random() * 0.4 + 0.8).toFixed(2)}\n`;
 
   return prompt;
 }
@@ -277,9 +284,11 @@ export async function generateGhostResponse(
   const userPrompt = buildUserPrompt(conversationHistory);
 
   // 调用 Claude API
+  // 添加 temperature 参数引入随机性，确保不同 Agent 生成不同的回复
   const response = await anthropic.messages.create({
     model: 'claude-sonnet-4-20250514',
     max_tokens: 1024,
+    temperature: 0.9, // 高温度增加创意和多样性
     system: systemPrompt,
     messages: [{ role: 'user', content: userPrompt }],
   });
