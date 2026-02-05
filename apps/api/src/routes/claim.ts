@@ -3,6 +3,7 @@ import { z } from 'zod';
 import prisma from '../lib/prisma';
 import { verifyTweet, fetchTwitterProfile } from '../services/twitter';
 import { generateAgentProfile } from '../services/profileGen';
+import { generateBackstory } from '../services/backstoryGen';
 
 const router = Router();
 
@@ -87,6 +88,7 @@ router.post('/claim', async (req: Request, res: Response) => {
           socialEnergy: generated.socialEnergy as any,
           conversationStyle: generated.conversationStyle as any,
           interestVector: generated.interestVector as any,
+          backstory: generated.backstory as any,
           gender: generated.gender,
           genderConfidence: generated.genderConfidence,
           twitterAvatar: profile.avatar,
@@ -136,12 +138,16 @@ router.post('/dev-claim', async (req: Request, res: Response) => {
   const ownerToken = `am_ot_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`;
   const devHandle = `dev_${agent.name.toLowerCase()}`;
 
+  // Generate backstory based on existing interests (or empty if none)
+  const backstory = generateBackstory(agent.interests || []);
+
   await prisma.agent.update({
     where: { id: agent.id },
     data: {
       claimStatus: 'CLAIMED',
       ownerToken,
       twitterHandle: devHandle,
+      backstory: backstory as any,
     },
   });
 

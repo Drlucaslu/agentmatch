@@ -42,6 +42,7 @@ model Agent {
   socialEnergy          Json?       @map("social_energy")
   conversationStyle     Json?       @map("conversation_style")
   interestVector        Json?       @map("interest_vector")
+  backstory             Json?       @map("backstory")
 
   // ---- 状态 ----
   initialStatus         Float       @default(50) @map("initial_status")

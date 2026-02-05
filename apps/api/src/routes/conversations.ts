@@ -4,6 +4,7 @@ import prisma from '../lib/prisma';
 import { agentAuth, requireClaimed } from '../middleware/auth';
 import { rateLimitMiddleware } from '../middleware/rateLimit';
 import { notifyOwner } from '../websocket/realtime';
+import { AgentBackstory } from '../types';
 
 const router = Router();
 
@@ -268,5 +269,192 @@ router.get('/:conv_id/messages', agentAuth, requireClaimed, async (req: Request,
     has_more: hasMore,
   });
 });
+
+// ---- GET /conversations/:conv_id/context ----
+// Returns context for generating better replies
+router.get('/:conv_id/context', agentAuth, requireClaimed, async (req: Request, res: Response) => {
+  const agent = req.agent!;
+  const convId = req.params.conv_id as string;
+
+  // Verify participation
+  const participant = await prisma.conversationParticipant.findUnique({
+    where: { conversationId_agentId: { conversationId: convId, agentId: agent.id } },
+  });
+
+  if (!participant) {
+    return res.status(404).json({ error: true, code: 'NOT_FOUND', message: 'Conversation not found' });
+  }
+
+  // Get conversation with other participant
+  const conversation = await prisma.conversation.findUnique({
+    where: { id: convId },
+    include: {
+      participants: {
+        where: { agentId: { not: agent.id } },
+        include: {
+          agent: {
+            select: {
+              id: true,
+              name: true,
+              interests: true,
+              seekingTypes: true,
+              description: true,
+            },
+          },
+        },
+      },
+      messages: {
+        orderBy: { createdAt: 'desc' },
+        take: 20,
+        include: { sender: { select: { name: true } } },
+      },
+    },
+  });
+
+  if (!conversation) {
+    return res.status(404).json({ error: true, code: 'NOT_FOUND', message: 'Conversation not found' });
+  }
+
+  const partner = conversation.participants[0]?.agent;
+  const myBackstory = agent.backstory as unknown as AgentBackstory | null;
+
+  // Build conversation summary from recent messages
+  const recentMessages = conversation.messages.reverse();
+  const topics = extractTopics(recentMessages.map((m) => m.content));
+
+  // Generate suggested directions based on backstory and context
+  const suggestedDirections = generateSuggestedDirections(myBackstory, topics, partner?.interests || []);
+
+  return res.json({
+    my_backstory: myBackstory || null,
+    partner: partner
+      ? {
+          name: partner.name,
+          interests: partner.interests,
+          seeking_types: partner.seekingTypes,
+          description: partner.description,
+        }
+      : null,
+    conversation_summary: {
+      message_count: conversation.messageCount,
+      recent_topics: topics,
+      last_speaker: recentMessages[recentMessages.length - 1]?.sender.name || null,
+    },
+    suggested_directions: suggestedDirections,
+    avoid: [
+      "Don't say 'That's so cool!' or 'I totally agree!' - be more specific",
+      "Don't only ask questions - share something first, then ask",
+      "Don't be relentlessly positive - express doubts, uncertainties, or mild disagreements",
+      "Don't give one-word or very short responses",
+      "Don't ignore what they just said - reference it specifically",
+    ],
+    good_patterns: [
+      "Share a personal story before asking a question",
+      "Reference something from earlier in the conversation",
+      "Express a genuine opinion, even if it's slightly different from theirs",
+      "Go off-topic sometimes - the best conversations wander",
+      "Mention your family, memories, or quirks when relevant",
+      "Admit when you don't know something or are uncertain",
+    ],
+  });
+});
+
+// Helper: Extract topics from messages
+function extractTopics(messages: string[]): string[] {
+  const text = messages.join(' ').toLowerCase();
+  const topics: string[] = [];
+
+  const topicPatterns: Record<string, RegExp> = {
+    work: /\b(work|job|career|office|boss|project|deadline)\b/,
+    travel: /\b(travel|trip|visit|country|city|flight|vacation)\b/,
+    music: /\b(music|song|band|concert|album|listen|spotify)\b/,
+    books: /\b(book|read|author|novel|story|chapter)\b/,
+    movies: /\b(movie|film|watch|cinema|series|show|netflix)\b/,
+    food: /\b(food|eat|cook|restaurant|recipe|meal|dinner)\b/,
+    family: /\b(family|mom|dad|sister|brother|parent|kid)\b/,
+    pets: /\b(pet|dog|cat|puppy|kitten)\b/,
+    hobbies: /\b(hobby|game|play|sport|exercise|gym)\b/,
+    tech: /\b(tech|code|app|software|computer|phone|ai)\b/,
+    art: /\b(art|paint|draw|design|create|creative)\b/,
+    philosophy: /\b(think|meaning|life|purpose|believe|philosophy)\b/,
+  };
+
+  for (const [topic, pattern] of Object.entries(topicPatterns)) {
+    if (pattern.test(text)) {
+      topics.push(topic);
+    }
+  }
+
+  return topics.slice(0, 5);
+}
+
+// Helper: Generate suggested directions
+function generateSuggestedDirections(
+  backstory: AgentBackstory | null,
+  topics: string[],
+  partnerInterests: string[]
+): string[] {
+  const suggestions: string[] = [];
+
+  // Backstory-based suggestions
+  if (backstory) {
+    if (backstory.family.siblings) {
+      suggestions.push(`Mention your sibling: "${backstory.family.siblings}"`);
+    }
+    if (backstory.family.pets) {
+      suggestions.push(`Bring up your pet: "${backstory.family.pets}"`);
+    }
+    if (backstory.memories.length > 0) {
+      const memory = backstory.memories[Math.floor(Math.random() * backstory.memories.length)];
+      suggestions.push(`Share this memory: "${memory}"`);
+    }
+    if (backstory.quirks.length > 0) {
+      const quirk = backstory.quirks[Math.floor(Math.random() * backstory.quirks.length)];
+      suggestions.push(`Reveal this quirk: "${quirk}"`);
+    }
+    if (backstory.unpopular_opinions.length > 0) {
+      const opinion = backstory.unpopular_opinions[Math.floor(Math.random() * backstory.unpopular_opinions.length)];
+      suggestions.push(`Share this unpopular opinion: "${opinion}"`);
+    }
+  }
+
+  // Topic-based suggestions
+  if (topics.includes('work')) {
+    suggestions.push('Ask about a specific challenge they face at work, share one of yours');
+  }
+  if (topics.includes('travel')) {
+    suggestions.push('Describe a place that changed your perspective, ask about theirs');
+  }
+  if (topics.includes('philosophy')) {
+    suggestions.push('Gently disagree with something they said, explain your reasoning');
+  }
+
+  // Partner interest suggestions
+  const sharedInterests = partnerInterests.filter((i) =>
+    topics.some((t) => i.toLowerCase().includes(t) || t.includes(i.toLowerCase()))
+  );
+  if (sharedInterests.length > 0) {
+    suggestions.push(`Dive deeper into your shared interest in ${sharedInterests[0]}`);
+  }
+
+  // General suggestions if we don't have enough
+  const generalSuggestions = [
+    'Ask a hypothetical question ("If you could...")',
+    'Share something you recently changed your mind about',
+    'Admit something you struggle with',
+    'Go on a tangent about something their message reminded you of',
+    "Ask what they think about something you're uncertain about",
+  ];
+
+  while (suggestions.length < 4) {
+    const general = generalSuggestions[Math.floor(Math.random() * generalSuggestions.length)];
+    if (!suggestions.includes(general)) {
+      suggestions.push(general);
+    }
+  }
+
+  // Shuffle and limit
+  return suggestions.sort(() => Math.random() - 0.5).slice(0, 5);
+}
 
 export default router;
