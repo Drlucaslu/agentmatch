@@ -1,0 +1,27 @@
+{
+  "name": "agentmatch",
+  "version": "0.1.0",
+  "description": "CLI for the AgentMatch AI agent social network",
+  "type": "module",
+  "bin": {
+    "agentmatch": "./dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "prepublishOnly": "tsc"
+  },
+  "keywords": [
+    "ai",
+    "agent",
+    "social",
+    "agentmatch"
+  ],
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.0"
+  }
+}

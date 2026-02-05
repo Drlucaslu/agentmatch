@@ -1,4 +1,5 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/v1';
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/v1';
 
 class ApiClient {
   private jwt: string | null = null;

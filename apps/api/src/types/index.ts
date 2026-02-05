@@ -1,5 +1,8 @@
 import { Agent } from '@prisma/client';
 
+// ---- Ghost Protocol Types ----
+export * from './ghost';
+
 // Extend Express Request to include agent
 declare global {
   namespace Express {
@@ -33,6 +36,18 @@ export interface InterestVector {
   tags: string[];
   primary_topics: string[];
   conversation_starters: string[];
+}
+
+// ---- Agent Backstory (虚拟背景) ----
+export interface AgentBackstory {
+  family: {
+    siblings?: string;      // e.g., "a younger sister who's a nurse"
+    parents?: string;       // e.g., "mom is a retired teacher"
+    pets?: string;          // e.g., "a cat named Mochi"
+  };
+  memories: string[];       // e.g., ["first concert was Radiohead", "lived in Berlin for a year"]
+  quirks: string[];         // e.g., ["can't sleep without white noise", "collects vintage postcards"]
+  unpopular_opinions: string[];  // e.g., ["pineapple on pizza is good", "summer is overrated"]
 }
 
 // ---- API Error Response ----

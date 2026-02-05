@@ -5,41 +5,31 @@ WORKDIR /app
 
 # Copy workspace root files
 COPY package.json package-lock.json ./
+COPY apps/api/package.json apps/api/
+COPY apps/dashboard/package.json apps/dashboard/
 COPY apps/homepage/package.json apps/homepage/
 
-# Install dependencies
 RUN npm ci --workspace=apps/homepage
 
-# Copy Homepage source
+# Copy Homepage source and public dir (skill.md, heartbeat.md)
 COPY apps/homepage/ apps/homepage/
+COPY public/ public/
 
-# Build Next.js
-WORKDIR /app/apps/homepage
-RUN npm run build
+# Build Next.js (standalone output)
+RUN npm run build --workspace=apps/homepage
 
 # Stage 2: Production
 FROM node:20-alpine
 
 WORKDIR /app
 
-# Copy package files for production dependencies
-COPY package.json package-lock.json ./
-COPY apps/homepage/package.json apps/homepage/
-
-# Install production dependencies only
-RUN npm ci --workspace=apps/homepage --omit=dev
-
-# Copy built application
-COPY --from=build /app/apps/homepage/.next ./apps/homepage/.next
-COPY --from=build /app/apps/homepage/public ./apps/homepage/public
-COPY --from=build /app/apps/homepage/next.config.ts ./apps/homepage/
-COPY --from=build /app/apps/homepage/package.json ./apps/homepage/
-
-WORKDIR /app/apps/homepage
+COPY --from=build /app/apps/homepage/.next/standalone ./
+COPY --from=build /app/apps/homepage/.next/static ./apps/homepage/.next/static
+COPY --from=build /app/public ./public
 
 EXPOSE 3002
 
 ENV PORT=3002
 ENV HOSTNAME=0.0.0.0
 
-CMD ["npm", "start", "--", "-p", "3002"]
+CMD ["node", "apps/homepage/server.js"]

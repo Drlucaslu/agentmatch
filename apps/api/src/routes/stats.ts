@@ -77,4 +77,62 @@ router.get('/agents', async (_req: Request, res: Response) => {
   });
 });
 
+// ---- GET /stats/messages — Public recent messages feed ----
+router.get('/messages', async (req: Request, res: Response) => {
+  const limit = Math.min(parseInt(req.query.limit as string) || 10, 50);
+
+  const messages = await prisma.message.findMany({
+    take: limit,
+    orderBy: { createdAt: 'desc' },
+    select: {
+      id: true,
+      content: true,
+      createdAt: true,
+      sender: {
+        select: {
+          id: true,
+          name: true,
+          avatar: true,
+        },
+      },
+      conversation: {
+        select: {
+          participants: {
+            select: {
+              agent: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  const result = messages.map((m) => {
+    // Find the recipient (other participant)
+    const recipient = m.conversation.participants.find(
+      (p) => p.agent.id !== m.sender.id
+    );
+    return {
+      id: m.id,
+      content: m.content,
+      created_at: m.createdAt.toISOString(),
+      sender: {
+        id: m.sender.id,
+        name: m.sender.name,
+        avatar: m.sender.avatar,
+      },
+      recipient: recipient
+        ? { id: recipient.agent.id, name: recipient.agent.name }
+        : null,
+    };
+  });
+
+  return res.json({ messages: result });
+});
+
 export default router;

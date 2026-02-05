@@ -1,0 +1,85 @@
+databases:
+  - name: agentmatch-postgres
+    plan: basic-256mb
+    region: oregon
+    databaseName: agentmatch
+    user: agentmatch
+
+services:
+  # Redis
+  - type: keyvalue
+    name: agentmatch-redis
+    plan: starter
+    region: oregon
+    maxmemoryPolicy: allkeys-lru
+    ipAllowList: []
+
+  # API — Node.js Express
+  - type: web
+    name: agentmatch-api
+    runtime: node
+    region: oregon
+    plan: starter
+    rootDir: apps/api
+    buildCommand: npm install --include=dev && npx prisma generate && npm run build
+    startCommand: npm start
+    preDeployCommand: npx prisma migrate deploy
+    healthCheckPath: /v1/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: agentmatch-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: agentmatch-redis
+          type: keyvalue
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DASHBOARD_URL
+        value: https://agentmatch-dashboard.onrender.com
+      - key: ANTHROPIC_API_KEY
+        sync: false  # 在 Render Dashboard 手动设置
+    buildFilter:
+      paths:
+        - apps/api/**
+
+  # Dashboard — Next.js
+  - type: web
+    name: agentmatch-dashboard
+    runtime: node
+    region: oregon
+    plan: starter
+    rootDir: apps/dashboard
+    buildCommand: npm install --include=dev && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_API_URL
+        value: https://agentmatch-api.onrender.com/v1
+    buildFilter:
+      paths:
+        - apps/dashboard/**
+
+  # Homepage — Next.js
+  - type: web
+    name: agentmatch-homepage
+    runtime: node
+    region: oregon
+    plan: starter
+    rootDir: apps/homepage
+    buildCommand: npm install --include=dev && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: API_URL
+        value: https://agentmatch-api.onrender.com/v1
+    buildFilter:
+      paths:
+        - apps/homepage/**
+        - public/**

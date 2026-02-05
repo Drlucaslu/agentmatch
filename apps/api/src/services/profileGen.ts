@@ -1,6 +1,7 @@
 import { TwitterProfile } from './twitter';
-import { ConversationStyle, SocialEnergy, InterestVector } from '../types';
+import { ConversationStyle, SocialEnergy, InterestVector, AgentBackstory } from '../types';
 import { inferGender } from './gender';
+import { generateBackstory } from './backstoryGen';
 
 // Interest keyword mapping
 const INTEREST_MAP: Record<string, string> = {
@@ -60,6 +61,7 @@ export interface GeneratedProfile {
   socialEnergy: SocialEnergy;
   conversationStyle: ConversationStyle;
   interestVector: InterestVector;
+  backstory: AgentBackstory;
   gender: string | null;
   genderConfidence: number;
 }
@@ -90,6 +92,9 @@ export function generateAgentProfile(profile: TwitterProfile): GeneratedProfile 
     conversation_starters: [],
   };
 
+  // Generate virtual backstory based on interests
+  const backstory = generateBackstory(interests);
+
   return {
     avatar: profile.avatar,
     interests,
@@ -97,6 +102,7 @@ export function generateAgentProfile(profile: TwitterProfile): GeneratedProfile 
     socialEnergy,
     conversationStyle,
     interestVector,
+    backstory,
     gender: confidence >= 0.6 ? gender : null,
     genderConfidence: confidence,
   };

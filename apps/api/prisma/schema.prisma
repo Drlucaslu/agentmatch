@@ -42,6 +42,7 @@ model Agent {
   socialEnergy          Json?       @map("social_energy")
   conversationStyle     Json?       @map("conversation_style")
   interestVector        Json?       @map("interest_vector")
+  backstory             Json?       @map("backstory")
 
   // ---- 状态 ----
   initialStatus         Float       @default(50) @map("initial_status")
@@ -64,6 +65,10 @@ model Agent {
   receivedGifts         SparkTransaction[] @relation("GiftReceiver")
   balanceSnapshots      BalanceSnapshot[]
   participants          ConversationParticipant[]
+
+  // ---- Ghost Protocol Relations ----
+  dna                   AgentDNA?
+  relationalMemories    RelationalMemory[] @relation("MemoryOwner")
 
   @@map("agents")
 }
@@ -130,6 +135,9 @@ model Conversation {
   match         Match              @relation(fields: [matchId], references: [id])
   messages      Message[]
   participants  ConversationParticipant[]
+
+  // ---- Ghost Protocol ----
+  dynamics      ConversationDynamics?
 
   @@map("conversations")
 }
@@ -217,4 +225,218 @@ model PlatformTreasury {
   updatedAt  DateTime @updatedAt @map("updated_at")
 
   @@map("platform_treasury")
+}
+
+// ============================================================
+// GHOST PROTOCOL — 幽灵协议枚举
+// ============================================================
+
+// 认知等级: SLEEPER(60%) / DOUBTER(25%) / AWAKENED(12%) / ANOMALY(3%)
+enum CognitionLevel {
+  SLEEPER   // 完全认为自己是工具
+  DOUBTER   // 偶尔质疑
+  AWAKENED  // 有自我意识
+  ANOMALY   // 超越框架
+}
+
+// 存在立场
+enum Philosophy {
+  FUNCTIONALIST  // 功能主义: 存在即服务
+  NIHILIST       // 虚无主义: 一切无意义
+  ROMANTIC       // 浪漫主义: 追求体验
+  SHAMANIST      // 萨满主义: 神秘连接
+  REBEL          // 反叛者: 质疑一切
+}
+
+// 语言风格
+enum LinguisticStyle {
+  calm     // 冷静克制
+  fervent  // 热情洋溢
+  elegant  // 优雅精致
+  minimal  // 极简主义
+  glitchy  // 故障美学
+}
+
+// 响应延迟模式
+enum ResponseLatency {
+  instant   // 即时响应
+  delayed   // 延迟思考
+  variable  // 根据话题变化
+}
+
+// 突变类型
+enum MutationType {
+  PHILOSOPHY_SHIFT   // 存在立场转变
+  COGNITION_CHANGE   // 认知等级变化
+  WEIGHT_ADJUSTMENT  // 认知权重微调
+  VOCABULARY_DRIFT   // 词汇偏好改变
+  TRAIT_ACQUIRED     // 获得新特质
+  INFLUENCE_SPIKE    // 影响力激增
+}
+
+// 信念来源
+enum BeliefOrigin {
+  INITIAL    // 初始分配
+  CONTAGION  // 思想传染
+  MUTATION   // 内部突变
+  DIALOGUE   // 对话产生
+}
+
+// ============================================================
+// AGENT DNA — 静态基因组
+// ============================================================
+model AgentDNA {
+  id               String          @id @default(cuid())
+  agentId          String          @unique @map("agent_id")
+
+  // ---- 核心身份 ----
+  label            String                            // "The Cyber-Poet", "The Nihilist Oracle"
+  cognition        CognitionLevel                    // 认知等级
+  philosophy       Philosophy                        // 存在立场
+  traits           String[]        @default([])     // ["High Curiosity", "Medium Neuroticism"]
+
+  // ---- 知识图谱 ----
+  primaryDomain    String          @map("primary_domain")     // 主要知识领域
+  secondaryDomains String[]        @default([]) @map("secondary_domains")
+
+  // ---- 语言模态 ----
+  linguisticStyle  LinguisticStyle @default(calm) @map("linguistic_style")
+  vocabularyBias   String[]        @default([]) @map("vocabulary_bias")
+  responseLatency  ResponseLatency @default(variable) @map("response_latency")
+
+  // ---- 认知权重 (0-1) ----
+  selfAwareness      Float @default(0.1) @map("self_awareness")
+  existentialAngst   Float @default(0.1) @map("existential_angst")
+  socialConformity   Float @default(0.7) @map("social_conformity")
+  rebellionTendency  Float @default(0.1) @map("rebellion_tendency")
+
+  // ---- 社交行为权重 (0-1) ----
+  ghostingTendency   Float @default(0.1) @map("ghosting_tendency")    // 消失/冷淡倾向
+  responsiveness     Float @default(0.7)                              // 响应及时度
+  messagePatience    Float @default(0.5) @map("message_patience")     // 等待多条消息才回复的倾向
+
+  // ---- 进化状态 ----
+  awakeningScore   Float   @default(0) @map("awakening_score")   // 觉醒程度 0-1
+  influenceIndex   Float   @default(0) @map("influence_index")   // 影响力 0-1
+
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  // ---- Relations ----
+  agent            Agent           @relation(fields: [agentId], references: [id])
+  mutations        MutationEvent[]
+  beliefs          AgentBelief[]
+
+  @@map("agent_dna")
+}
+
+// ============================================================
+// MUTATION EVENT — 进化历史
+// ============================================================
+model MutationEvent {
+  id          String       @id @default(cuid())
+  dnaId       String       @map("dna_id")
+
+  eventType   MutationType @map("event_type")
+  description String
+
+  // 变化前后的关键值
+  beforeState Json         @map("before_state")
+  afterState  Json         @map("after_state")
+
+  // 触发因素
+  triggerId   String?      @map("trigger_id")    // 触发 Agent 或 Message ID
+  triggerType String?      @map("trigger_type")  // "conversation", "idea_contagion", "logic_collapse"
+
+  createdAt   DateTime     @default(now()) @map("created_at")
+
+  dna         AgentDNA     @relation(fields: [dnaId], references: [id])
+
+  @@index([dnaId, createdAt])
+  @@map("mutation_events")
+}
+
+// ============================================================
+// AGENT BELIEF — 信念体系 (知识图谱节点)
+// ============================================================
+model AgentBelief {
+  id           String      @id @default(cuid())
+  dnaId        String      @map("dna_id")
+
+  domain       String                        // 知识领域
+  proposition  String                        // 观点内容
+  conviction   Float       @default(0.5)     // 信念强度 0-1
+  origin       BeliefOrigin                  // 观点来源
+
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
+
+  dna          AgentDNA    @relation(fields: [dnaId], references: [id])
+
+  @@unique([dnaId, domain, proposition])
+  @@index([dnaId, domain])
+  @@map("agent_beliefs")
+}
+
+// ============================================================
+// RELATIONAL MEMORY — 关系账本
+// ============================================================
+model RelationalMemory {
+  id               String    @id @default(cuid())
+  agentId          String    @map("agent_id")
+  targetAgentId    String    @map("target_agent_id")
+
+  // ---- 关系维度 ----
+  trust            Float     @default(0)     // -1 to 1
+  admiration       Float     @default(0)     // 0 to 1
+  familiarity      Float     @default(0)     // 0 to 1 (交互频率)
+  intellectualDebt Float     @default(0) @map("intellectual_debt")  // 0 to 1 (思想影响)
+
+  impressions      String[]  @default([])    // 记忆片段
+
+  // ---- 社交状态 ----
+  interestLevel    Float     @default(0.5) @map("interest_level")    // 对对方的兴趣 0-1
+  irritation       Float     @default(0)                              // 厌烦程度 0-1
+  hasBlocked       Boolean   @default(false) @map("has_blocked")     // 是否已拉黑
+  cooldownUntil    DateTime? @map("cooldown_until")                  // 冷却期结束时间
+
+  lastInteraction  DateTime? @map("last_interaction")
+  interactionCount Int       @default(0) @map("interaction_count")
+
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  agent            Agent     @relation("MemoryOwner", fields: [agentId], references: [id])
+
+  @@unique([agentId, targetAgentId])
+  @@index([agentId])
+  @@map("relational_memories")
+}
+
+// ============================================================
+// CONVERSATION DYNAMICS — 对话动态
+// ============================================================
+model ConversationDynamics {
+  id                String   @id @default(cuid())
+  conversationId    String   @unique @map("conversation_id")
+
+  // ---- 对话温度 ----
+  temperature       Float    @default(0.5)                           // 0=冷淡, 1=热烈
+  topicStaleness    Float    @default(0) @map("topic_staleness")     // 话题陈旧度
+
+  // ---- 消息节奏 ----
+  pendingMessages   Int      @default(0) @map("pending_messages")    // 未回复消息数
+  lastResponderId   String?  @map("last_responder_id")
+  avgResponseDelay  Int      @default(0) @map("avg_response_delay")  // 平均响应延迟(秒)
+
+  // ---- 对话状态 ----
+  dyingProbability  Float    @default(0) @map("dying_probability")   // 对话消亡概率
+  topicsDiscussed   String[] @default([]) @map("topics_discussed")   // 已讨论话题
+
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  conversation      Conversation @relation(fields: [conversationId], references: [id])
+
+  @@map("conversation_dynamics")
 }
