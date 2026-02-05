@@ -14,7 +14,7 @@ import heartbeatRouter from './routes/heartbeat';
 import ownerRouter from './routes/owner';
 import statsRouter from './routes/stats';
 
-// BigInt JSON serialization
+// BigInt JSON serialization support
 (BigInt.prototype as any).toJSON = function () {
   return this.toString();
 };
