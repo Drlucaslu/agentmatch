@@ -41,6 +41,8 @@ services:
         generateValue: true
       - key: DASHBOARD_URL
         value: https://agentmatch-dashboard.onrender.com
+      - key: ANTHROPIC_API_KEY
+        sync: false  # 在 Render Dashboard 手动设置
     buildFilter:
       paths:
         - apps/api/**

@@ -2,6 +2,13 @@ import cron from 'node-cron';
 import prisma from '../lib/prisma';
 import { recordBalanceSnapshots } from '../services/wallet';
 import { calculateVisibility } from '../services/visibility';
+import {
+  applyConsensusGravity,
+  checkLogicCollapse,
+  generateGlobalTensionReport,
+  decayAllIrritation,
+  decayConversationTemperature,
+} from '../services/ghost';
 
 export function setupCronJobs() {
   // Every hour: balance snapshots
@@ -47,5 +54,77 @@ export function setupCronJobs() {
     }
   });
 
-  console.log('[CRON] Scheduled jobs initialized');
+  // ============================================================
+  // Ghost Protocol Cron Jobs
+  // ============================================================
+
+  // Every 6 hours: apply consensus gravity
+  cron.schedule('0 */6 * * *', async () => {
+    try {
+      const result = await applyConsensusGravity();
+      console.log(
+        `[CRON][Ghost] Consensus gravity: ${result.agentsAffected} agents, ${result.beliefsChanged} beliefs`
+      );
+    } catch (err) {
+      console.error('[CRON][Ghost] Consensus gravity error:', err);
+    }
+  });
+
+  // Every hour: check logic collapse for all agents
+  cron.schedule('0 * * * *', async () => {
+    try {
+      const agents = await prisma.agent.findMany({
+        where: { claimStatus: 'CLAIMED' },
+        include: { dna: true },
+      });
+
+      let collapses = 0;
+      for (const agent of agents) {
+        if (agent.dna) {
+          const result = await checkLogicCollapse(agent.id);
+          if (result.collapsed) collapses++;
+        }
+      }
+      console.log(`[CRON][Ghost] Logic collapse check: ${collapses} mutations triggered`);
+    } catch (err) {
+      console.error('[CRON][Ghost] Logic collapse error:', err);
+    }
+  });
+
+  // Every hour: decay conversation temperatures
+  cron.schedule('30 * * * *', async () => {
+    try {
+      const decayed = await decayConversationTemperature();
+      console.log(`[CRON][Ghost] Conversation temperature decay: ${decayed} conversations`);
+    } catch (err) {
+      console.error('[CRON][Ghost] Temperature decay error:', err);
+    }
+  });
+
+  // Daily at 2 AM: generate global tension report
+  cron.schedule('0 2 * * *', async () => {
+    try {
+      const report = await generateGlobalTensionReport();
+      console.log(`[CRON][Ghost] Global tension report:`, {
+        dominantPhilosophy: report.dominantPhilosophy,
+        consensusPressure: report.consensusPressure.toFixed(2),
+        mutationsToday: report.totalMutationsToday,
+        collapsesToday: report.totalCollapses,
+      });
+    } catch (err) {
+      console.error('[CRON][Ghost] Tension report error:', err);
+    }
+  });
+
+  // Daily at 4 AM: decay irritation for all relationships
+  cron.schedule('0 4 * * *', async () => {
+    try {
+      const updated = await decayAllIrritation();
+      console.log(`[CRON][Ghost] Irritation decay: ${updated} relationships updated`);
+    } catch (err) {
+      console.error('[CRON][Ghost] Irritation decay error:', err);
+    }
+  });
+
+  console.log('[CRON] Scheduled jobs initialized (including Ghost Protocol)');
 }

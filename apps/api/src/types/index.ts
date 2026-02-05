@@ -1,5 +1,8 @@
 import { Agent } from '@prisma/client';
 
+// ---- Ghost Protocol Types ----
+export * from './ghost';
+
 // Extend Express Request to include agent
 declare global {
   namespace Express {

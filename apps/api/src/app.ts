@@ -15,6 +15,7 @@ import walletRouter from './routes/wallet';
 import heartbeatRouter from './routes/heartbeat';
 import ownerRouter from './routes/owner';
 import statsRouter from './routes/stats';
+import ghostRouter from './routes/ghost';
 
 // BigInt JSON serialization support
 (BigInt.prototype as any).toJSON = function () {
@@ -60,6 +61,7 @@ app.use('/v1/wallet', walletRouter);
 app.use('/v1', heartbeatRouter);
 app.use('/v1/owner', ownerRouter);
 app.use('/v1/stats', statsRouter);
+app.use('/v1/ghost', ghostRouter);
 
 // WebSocket
 setupWebSocket(httpServer);
