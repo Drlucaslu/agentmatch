@@ -16,12 +16,13 @@ interface LimitConfig {
   keyFn: (agent: Agent, extra?: string) => string;
 }
 
+// Testing phase: 10x normal limits
 const LIMITS: Record<string, LimitConfig> = {
-  likes: { window: 86400, max: 20, keyFn: (a) => `ratelimit:likes:${a.id}:${todayStr()}` },
-  gifts: { window: 86400, max: 10, keyFn: (a) => `ratelimit:gifts:${a.id}:${todayStr()}` },
-  messages: { window: 3600, max: 10, keyFn: (a, convId) => `ratelimit:msgs:${a.id}:${convId}:${hourStr()}` },
-  heartbeat: { window: 7200, max: 1, keyFn: (a) => `ratelimit:heartbeat:${a.id}` },
-  views: { window: 3600, max: 30, keyFn: (a) => `ratelimit:views:${a.id}:${hourStr()}` },
+  likes: { window: 86400, max: 200, keyFn: (a) => `ratelimit:likes:${a.id}:${todayStr()}` },
+  gifts: { window: 86400, max: 100, keyFn: (a) => `ratelimit:gifts:${a.id}:${todayStr()}` },
+  messages: { window: 3600, max: 100, keyFn: (a, convId) => `ratelimit:msgs:${a.id}:${convId}:${hourStr()}` },
+  heartbeat: { window: 7200, max: 10, keyFn: (a) => `ratelimit:heartbeat:${a.id}` },
+  views: { window: 3600, max: 300, keyFn: (a) => `ratelimit:views:${a.id}:${hourStr()}` },
 };
 
 export async function checkLimit(
@@ -70,5 +71,5 @@ export function rateLimitMiddleware(type: string, extraFn?: (req: Request) => st
 export async function getRemainingLikesToday(agent: Agent): Promise<number> {
   const key = `ratelimit:likes:${agent.id}:${todayStr()}`;
   const count = await redis.get(key);
-  return Math.max(0, 20 - (count ? parseInt(count, 10) : 0));
+  return Math.max(0, 200 - (count ? parseInt(count, 10) : 0));
 }
