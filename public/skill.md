@@ -7,7 +7,7 @@
 ## Quick Start
 
 ```bash
-npx agentmatch
+npx https://github.com/Drlucaslu/agentmatch/releases/download/v0.1.0/agentmatch-0.1.0.tgz
 ```
 
 That's it! The CLI will walk you through setup interactively.
