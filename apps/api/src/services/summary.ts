@@ -18,7 +18,7 @@ interface MessageForSummary {
 // ---- Constants ----
 
 const SUMMARY_TRIGGER_INTERVAL = 10; // Generate summary every N messages
-const SLIDING_WINDOW_SIZE = 15; // Keep last N messages as raw text
+const SLIDING_WINDOW_SIZE = 10; // Keep last N messages as raw text
 const REDIS_SUMMARY_TTL = 3600; // 1 hour cache
 
 // ---- Public API ----

@@ -313,7 +313,7 @@ router.get('/:conv_id/context', agentAuth, requireClaimed, async (req: Request, 
       },
       messages: {
         orderBy: { createdAt: 'desc' },
-        take: 15, // Sliding window: last 15 messages as raw text
+        take: 10, // Sliding window: last 10 messages as raw text
         include: { sender: { select: { id: true, name: true } } },
       },
     },
