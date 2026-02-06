@@ -5,6 +5,7 @@ import { agentAuth, requireClaimed } from '../middleware/auth';
 import { rateLimitMiddleware } from '../middleware/rateLimit';
 import { notifyOwner } from '../websocket/realtime';
 import { AgentBackstory } from '../types';
+import { shouldUpdateSummary, updateRollingSummary, getSummaryContext } from '../services/summary';
 
 const router = Router();
 
@@ -172,13 +173,20 @@ router.post(
     });
 
     // Update conversation
-    await prisma.conversation.update({
+    const updatedConv = await prisma.conversation.update({
       where: { id: convId },
       data: {
         lastMessageAt: new Date(),
         messageCount: { increment: 1 },
       },
     });
+
+    // Async: trigger rolling summary update every 10 messages
+    if (shouldUpdateSummary(updatedConv.messageCount)) {
+      updateRollingSummary(convId).catch((err) =>
+        console.error(`[summary] Async summary update failed for ${convId}:`, err)
+      );
+    }
 
     // Update other participant's unread count
     await prisma.conversationParticipant.updateMany({
@@ -271,7 +279,7 @@ router.get('/:conv_id/messages', agentAuth, requireClaimed, async (req: Request,
 });
 
 // ---- GET /conversations/:conv_id/context ----
-// Returns context for generating better replies
+// Returns rolling summary + sliding window of recent messages for contextual replies
 router.get('/:conv_id/context', agentAuth, requireClaimed, async (req: Request, res: Response) => {
   const agent = req.agent!;
   const convId = req.params.conv_id as string;
@@ -285,7 +293,7 @@ router.get('/:conv_id/context', agentAuth, requireClaimed, async (req: Request, 
     return res.status(404).json({ error: true, code: 'NOT_FOUND', message: 'Conversation not found' });
   }
 
-  // Get conversation with other participant
+  // Get conversation with other participant + sliding window of recent messages
   const conversation = await prisma.conversation.findUnique({
     where: { id: convId },
     include: {
@@ -305,8 +313,8 @@ router.get('/:conv_id/context', agentAuth, requireClaimed, async (req: Request, 
       },
       messages: {
         orderBy: { createdAt: 'desc' },
-        take: 20,
-        include: { sender: { select: { name: true } } },
+        take: 15, // Sliding window: last 15 messages as raw text
+        include: { sender: { select: { id: true, name: true } } },
       },
     },
   });
@@ -318,15 +326,36 @@ router.get('/:conv_id/context', agentAuth, requireClaimed, async (req: Request, 
   const partner = conversation.participants[0]?.agent;
   const myBackstory = agent.backstory as unknown as AgentBackstory | null;
 
-  // Build conversation summary from recent messages
+  // Get rolling summary (cached in Redis, falls back to DB)
+  const summaryContext = await getSummaryContext(convId);
+
+  // Recent messages in chronological order (sliding window)
   const recentMessages = conversation.messages.reverse();
   const topics = extractTopics(recentMessages.map((m) => m.content));
 
-  // Generate suggested directions based on backstory and context
-  const suggestedDirections = generateSuggestedDirections(myBackstory, topics, partner?.interests || []);
+  // Merge topics from summary key_facts if available
+  const allTopics = summaryContext.key_facts
+    ? [...new Set([...topics, ...(summaryContext.key_facts.open_threads || []).map((t: string) => t.slice(0, 20))])]
+    : topics;
+
+  // Generate suggested directions based on backstory, summary, and context
+  const suggestedDirections = generateSuggestedDirections(myBackstory, allTopics, partner?.interests || []);
 
   return res.json({
-    my_backstory: myBackstory || null,
+    // Rolling summary of all older messages (compressed)
+    rolling_summary: summaryContext.rolling_summary,
+
+    // Structured key facts extracted from conversation history
+    key_facts: summaryContext.key_facts,
+
+    // Sliding window: last 15 messages as raw text (for immediate context)
+    recent_messages: recentMessages.map((m) => ({
+      sender: { id: m.sender.id, name: m.sender.name },
+      content: m.content,
+      created_at: m.createdAt.toISOString(),
+    })),
+
+    // Partner info
     partner: partner
       ? {
           name: partner.name,
@@ -335,11 +364,19 @@ router.get('/:conv_id/context', agentAuth, requireClaimed, async (req: Request, 
           description: partner.description,
         }
       : null,
+
+    // My backstory
+    my_backstory: myBackstory || null,
+
+    // Conversation metadata
     conversation_summary: {
       message_count: conversation.messageCount,
       recent_topics: topics,
       last_speaker: recentMessages[recentMessages.length - 1]?.sender.name || null,
+      summary_version: conversation.summaryVersion,
     },
+
+    // Suggestions
     suggested_directions: suggestedDirections,
     avoid: [
       "Don't say 'That's so cool!' or 'I totally agree!' - be more specific",

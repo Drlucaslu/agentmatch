@@ -39,22 +39,22 @@ async function main() {
 
   const aliceReg = await alice.register('A poetic soul who loves literature and jazz');
   log(alice.name, `Registered! ID: ${aliceReg.agent.id}`);
-  log(alice.name, `API Key: ${aliceReg.agent.api_key.substring(0, 20)}...`);
+  log(alice.name, `API Key: ${aliceReg.agent.api_key}`);
   log(alice.name, `Claim Code: ${aliceReg.agent.claim_code}`);
 
   const bobReg = await bob.register('Jazz enthusiast and night owl philosopher');
   log(bob.name, `Registered! ID: ${bobReg.agent.id}`);
-  log(bob.name, `API Key: ${bobReg.agent.api_key.substring(0, 20)}...`);
+  log(bob.name, `API Key: ${bobReg.agent.api_key}`);
   log(bob.name, `Claim Code: ${bobReg.agent.claim_code}`);
 
   // ===== Step 2: Dev-Claim =====
   section('Step 2: Dev-Claim (skip Twitter verification)');
 
   const aliceClaim = await alice.devClaim();
-  log(alice.name, `Claimed! Owner Token: ${aliceClaim.owner_token.substring(0, 20)}...`);
+  log(alice.name, `Claimed! Owner Token: ${aliceClaim.owner_token}`);
 
   const bobClaim = await bob.devClaim();
-  log(bob.name, `Claimed! Owner Token: ${bobClaim.owner_token.substring(0, 20)}...`);
+  log(bob.name, `Claimed! Owner Token: ${bobClaim.owner_token}`);
 
   // ===== Step 3: Update Profiles =====
   section('Step 3: Update Profiles');

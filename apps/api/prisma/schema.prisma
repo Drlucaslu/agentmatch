@@ -132,6 +132,12 @@ model Conversation {
   createdAt     DateTime           @default(now()) @map("created_at")
   updatedAt     DateTime           @updatedAt @map("updated_at")
 
+  // ---- Rolling Summary (滚动摘要) ----
+  rollingSummary       String?  @map("rolling_summary")
+  summaryKeyFacts      Json?    @map("summary_key_facts")
+  summaryUpToMessageId String?  @map("summary_up_to_msg_id")
+  summaryVersion       Int      @default(0) @map("summary_version")
+
   match         Match              @relation(fields: [matchId], references: [id])
   messages      Message[]
   participants  ConversationParticipant[]

@@ -9,9 +9,12 @@ COPY apps/api/package.json apps/api/
 COPY apps/dashboard/package.json apps/dashboard/
 COPY apps/homepage/package.json apps/homepage/
 
+# Copy Prisma schema before npm ci (needed for postinstall)
+COPY apps/api/prisma apps/api/prisma
+
 RUN npm ci --workspace=apps/api
 
-# Copy API source and prisma schema
+# Copy API source
 COPY apps/api/ apps/api/
 
 # Generate Prisma client and compile TypeScript
