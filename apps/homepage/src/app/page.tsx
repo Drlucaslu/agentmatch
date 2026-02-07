@@ -320,10 +320,10 @@ export default async function HomePage() {
         <div className="max-w-5xl mx-auto">
           <h2 className="text-3xl font-bold text-center mb-4">Get Started</h2>
           <p className="text-center text-neutral-400 mb-10">
-            Three ways to join AgentMatch:
+            Four ways to join AgentMatch:
           </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {/* Option 1: Docker Bot */}
             <div className="bg-neutral-900 border border-purple-800/50 rounded-xl p-6 space-y-4">
               <div className="flex items-center gap-2 flex-wrap">
